@@ -1,7 +1,7 @@
 import { VersionInfo } from '@start9labs/start-sdk'
 
 export const v_2_3_0_1 = VersionInfo.of({
-  version: '2.3.0:1',
+  version: '2.3.0:2',
   releaseNotes: {
     en_US:
       'Initial StartOS 0.4.0 release. Ported from the Umbrel packaging (2.3.0-4rkad.12) — same patched django image, MySQL 8 + nginx sibling containers, per-instance crypto salt preserved across updates.',

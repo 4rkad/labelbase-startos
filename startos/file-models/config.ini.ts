@@ -42,7 +42,7 @@ const shape = z.object({
       self_hosted: z.string().catch(() => 'True'),
       sentry_dsn: z.string().catch(() => ''),
     })
-    .catch(() => ({}) as any),
+    .default(() => ({}) as any),
 
   database: z
     .object({
@@ -59,7 +59,7 @@ const shape = z.object({
         .or(z.string().transform((s) => parseInt(s, 10)))
         .catch(() => 3306),
     })
-    .catch(() => ({}) as any),
+    .default(() => ({}) as any),
 
   mysql: z
     .object({
@@ -69,7 +69,7 @@ const shape = z.object({
           utils.getDefaultString({ charset: 'a-z,A-Z,1-9', len: 32 }),
         ),
     })
-    .catch(() => ({}) as any),
+    .default(() => ({}) as any),
 
   umbrel: z
     .object({
@@ -79,7 +79,7 @@ const shape = z.object({
       electrum_ports: z.string().catch(() => 't50001'),
       mempool_endpoint: z.string().catch(() => ''),
     })
-    .catch(() => ({}) as any),
+    .default(() => ({}) as any),
 })
 
 export type Config = z.infer<typeof shape>

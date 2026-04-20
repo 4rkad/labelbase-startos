@@ -10,6 +10,8 @@ export const main = sdk.setupMain(async ({ effects }) => {
   // ========================
   // Read persistent config (file-models auto-generate defaults on first read)
   // ========================
+  // Force seed (merge with empty object triggers generation of all defaulted fields)
+  await configIni.merge(effects, {})
   const config = await configIni.read().const(effects)
   if (!config) throw new Error('Could not read config.ini')
 
