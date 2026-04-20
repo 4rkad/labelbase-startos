@@ -1,79 +1,47 @@
 # Labelbase — StartOS package
 
-Self-hosted BIP-329 label management for Bitcoin wallets, packaged for [StartOS](https://start9.com).
+Self-hosted BIP-329 label management for Bitcoin wallets, packaged for [StartOS](https://start9.com) 0.4.0.
 
-## Status
+Ported from the Umbrel packaging (`2.3.0-4rkad.12`) — same patched Django image, MySQL 8 + nginx sibling containers, per-instance crypto salt preserved across updates.
 
-**This is a packaging skeleton.** It will not produce a working `.s9pk` until two prerequisites are met:
+## Install (sideload)
 
-### 1. A combined Docker image must exist on a registry
+Download the latest `.s9pk` from [Releases](https://github.com/4rkad/labelbase-startos/releases):
 
-Upstream Labelbase ships **three containers** (Django + MySQL + nginx) and **does not publish prebuilt images**. StartOS expects a **single image per package**, so you must build a combined image first.
+- `labelbase_x86_64.s9pk` — Intel/AMD mini-PCs
+- `labelbase_aarch64.s9pk` — Raspberry Pi / Start9 Server
 
-Suggested approach — write a multi-stage Dockerfile that bundles:
+In StartOS: **Settings → Sideload Service → Upload**, select the `.s9pk`, wait for install to finish, then **Start** the service.
 
-- The Django app (gunicorn) on port 8000 (loopback)
-- MySQL 8 with data dir on `/data/mysql`
-- nginx serving static + reverse-proxying Django, listening on **8080**
-- A `supervisord.conf` that boots all three
-- An entrypoint `/usr/local/bin/start-labelbase.sh` that runs `supervisord -n`
+## Architecture
 
-Push it to `ghcr.io/<your-fork>/labelbase:2.3.0` and update `startos/manifest/index.ts` to point to your tag.
+Three sibling `SubContainer`s inside the `labelbase` package, communicating over loopback (`127.0.0.1`):
 
-### 2. The StartOS SDK build toolchain must be installed
+- **mysql** (`mysql:8.0.36`) — data dir on subpath `mysql` of the `main` volume.
+- **django** (`ghcr.io/4rkad/labelbase-django:2.3.0-4rkad.12`) — gunicorn on `:8000`, mounts `config.ini`, `labelbase.log`, `static/`, `media/`. Depends on `mysql`.
+- **nginx** (`nginx:1.27-alpine`) — serves static/media + reverse-proxies Django, exposes `:8080` to StartOS. Depends on `django`.
 
-Build steps, from this directory:
+Secrets (`secret_key`, `crypto_salt`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD`) are generated once on first run and persisted in `config.ini` on the `main` volume — they survive updates.
+
+Backups use `sdk.Backups.withMysqlDump(...).addVolume('main')` — logical DB dump plus the full `main` volume (config.ini, static/, media/, logs).
+
+## Build from source
+
+Requires:
+- Node.js + npm
+- [`start-cli 0.4.0-beta.5`](https://github.com/Start9Labs/start-os/releases) in `PATH` (pre-built binary, no Rust compile needed)
+- `tar2sqfs` (`sudo apt install squashfs-tools-ng` on Debian/Ubuntu)
+- Developer signing key at `~/.startos/developer.key.pem` (`start-cli init-key` to generate)
+
+Then:
 
 ```bash
 npm install
-npm run build       # transpile TS → ./javascript
-make                # produce labelbase.s9pk via s9pk.mk
+make x86    # produces labelbase_x86_64.s9pk
+make arm    # produces labelbase_aarch64.s9pk
+make clean  # remove .s9pk, ./javascript, ./node_modules
 ```
 
-You also need `s9pk.mk` (copy from any reference Start9Labs package, e.g. `Start9Labs/hello-world-startos`) — it's not duplicated here to avoid tracking upstream drift.
+## License
 
-## Structure
-
-```
-labelbase-startos/
-├── Makefile
-├── README.md
-├── icon.svg
-├── package.json
-├── tsconfig.json
-└── startos/
-    ├── index.ts            # plumbing — do not edit
-    ├── sdk.ts              # plumbing — do not edit
-    ├── utils.ts            # uiPort = 8080
-    ├── i18n.ts             # passthrough translator
-    ├── main.ts             # daemon: runs start-labelbase.sh
-    ├── interfaces.ts       # exports the web UI on uiPort
-    ├── dependencies.ts     # none
-    ├── backups.ts          # backs up the entire 'main' volume
-    ├── manifest/
-    │   ├── index.ts        # id, image tag, license, alerts
-    │   └── i18n.ts         # short/long descriptions (EN, ES)
-    ├── init/index.ts       # init/uninit wiring
-    ├── actions/index.ts    # empty — add custom actions here
-    └── versions/
-        ├── index.ts
-        └── v2.3.0.ts       # initial version
-```
-
-## What's missing for production
-
-- **`s9pk.mk`** copied from a reference Start9 package.
-- **Combined Dockerfile + supervisord config + start script** — the hardest part.
-- **Marketing screenshots** in `assets/` and `gallery` field in manifest.
-- **Custom actions** (reset admin password, export labels, view BIP-329 dump).
-- **Backup config tuning** — currently dumps the whole `main` volume; for big DBs, prefer a `mysqldump`-based hook.
-- **Health check refinement** — currently just port-listening; could hit a Django health endpoint.
-
-## Why this is harder than the Umbrel package
-
-Umbrel runs **multi-container** docker-compose stacks natively. Start9 packages are **single-image** by convention, so you have to combine all three Labelbase services into one container. This is a real engineering task, not a config exercise.
-
-If you want to ship Labelbase on StartOS quickly, the realistic path is:
-
-1. Convince Labelbase upstream to publish official images, OR
-2. Maintain a fork of `Labelbase/Labelbase` whose CI builds the combined image and a release artifact pointing to it.
+[AGPL-3.0](./LICENSE) — same as upstream Labelbase.
