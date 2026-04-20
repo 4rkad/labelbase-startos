@@ -97,6 +97,13 @@ export const main = sdk.setupMain(async ({ effects }) => {
   )
 
   // ========================
+  // Fix ownership of the MySQL data directory — StartOS creates the volume
+  // subpath as root:root, but mysqld runs as the `mysql` user inside the
+  // container and needs write access.
+  // ========================
+  await mysqlSub.exec(['chown', '-R', 'mysql:mysql', '/var/lib/mysql'])
+
+  // ========================
   // Daemons — chain: mysql → django → nginx
   // ========================
   return sdk.Daemons.of(effects)
