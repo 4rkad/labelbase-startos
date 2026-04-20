@@ -97,11 +97,16 @@ export const main = sdk.setupMain(async ({ effects }) => {
   )
 
   // ========================
-  // Fix ownership of the MySQL data directory — StartOS creates the volume
-  // subpath as root:root, but mysqld runs as the `mysql` user inside the
-  // container and needs write access.
+  // Fix ownership of bind-mounted paths. StartOS creates volume subpaths as
+  // root:root, but mysqld runs as uid `mysql` and django runs as uid 1000
+  // (per the image USER directive). `user: '0:0'` forces the exec to run as
+  // root even when the image has a non-root default USER (django case).
   // ========================
   await mysqlSub.exec(['chown', '-R', 'mysql:mysql', '/var/lib/mysql'])
+  await djangoSub.exec(
+    ['chown', '-R', '1000:1000', '/app/labelbase.log', '/app/static', '/app/media'],
+    { user: '0:0' },
+  )
 
   // ========================
   // Daemons — chain: mysql → django → nginx
