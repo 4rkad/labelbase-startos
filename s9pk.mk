@@ -114,14 +114,14 @@ check-init:
 	fi
 
 javascript/index.js: $(shell find startos -type f) tsconfig.json node_modules
-	npm run check
-	npm run build
+	pnpm run check
+	pnpm run build
 
-node_modules: package-lock.json
-	npm ci
+node_modules: pnpm-lock.yaml
+	pnpm install --frozen-lockfile
 
-package-lock.json: package.json
-	npm i
+pnpm-lock.yaml: package.json
+	pnpm install
 
 clean:
 	@echo "Cleaning up build artifacts..."

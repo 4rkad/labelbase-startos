@@ -28,7 +28,7 @@ Backups use `sdk.Backups.withMysqlDump(...).addVolume('main')` — logical DB du
 ## Build from source
 
 Requires:
-- Node.js + npm
+- Node.js + pnpm 9+ (`npm install -g pnpm`)
 - [`start-cli 0.4.0-beta.5`](https://github.com/Start9Labs/start-os/releases) in `PATH` (pre-built binary, no Rust compile needed)
 - `tar2sqfs` (`sudo apt install squashfs-tools-ng` on Debian/Ubuntu)
 - Developer signing key at `~/.startos/developer.key.pem` (`start-cli init-key` to generate)
@@ -36,7 +36,7 @@ Requires:
 Then:
 
 ```bash
-npm install
+pnpm install --frozen-lockfile
 make x86    # produces labelbase_x86_64.s9pk
 make arm    # produces labelbase_aarch64.s9pk
 make clean  # remove .s9pk, ./javascript, ./node_modules
